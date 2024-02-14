@@ -9,7 +9,7 @@
 # All rights reserved.
 
 import asyncio
-from argparse import ArgumentError, ArgumentParser
+from argparse import ArgumentError, ArgumentParser, RawTextHelpFormatter
 from typing import Optional
 
 import aiohttp
@@ -33,6 +33,7 @@ parser = FallableArgumentParser(
     usage="%(prog)s FROM TO [AMOUNT]",
     description="Convert currency & get exchange rates.",
     add_help=False,
+    formatter_class=RawTextHelpFormatter,
 )
 
 CURRENCIES = {}
@@ -52,6 +53,7 @@ async def init() -> None:
                 data = res["data"]["currencies"]
                 for currency in data:
                     CURRENCIES[currency["alphaCd"]] = currency["currNam"]
+                LOG.info(f"Available Currencies: {CURRENCIES}")
     except Exception as e:
         LOG.info(f"Unexpected error occurred while fetching currencies: {e}")
 
@@ -89,7 +91,7 @@ async def init() -> None:
     about={
         "header": "use this to convert currency & get exchange rate",
         "description": "Convert currency & get exchange rates.",
-        "examples": "{tr}cr BTC USD 1",
+        "examples": "{tr}cr USD GBP 1 | Use -d yyyy-mm-dd Flag to get historical rates",
     },
 )
 async def currency_conversion(message: Message):
@@ -104,7 +106,7 @@ async def currency_conversion(message: Message):
     try:
         parsed_args = parser.parse_args(args)
     except ArgumentError as e:
-        await message.err(f"`{parser.format_help()}\n{str(e)}`", del_in=5)
+        await message.err(f"`{parser.format_help()}\n\n{str(e)}`", del_in=5)
         return
 
     # fxDate	           YYYY-MM-DD	        The date of the transaction
@@ -121,8 +123,7 @@ async def currency_conversion(message: Message):
             f"&fxDate={date}"
             f"&transCurr={parsed_args.from_currency}"
             f"&crdhldBillCurr={parsed_args.to_currency}"
-            f"&transAmt={parsed_args.amount}",
-            date,
+            f"&transAmt={parsed_args.amount}"
         )
         for date in parsed_args.date
     )
@@ -131,11 +132,11 @@ async def currency_conversion(message: Message):
 
     try:
         async with aiohttp.ClientSession() as session:
-            for url, date in urls:
+            for url in urls:
                 async with session.get(url) as response:
                     if response.status != 200:
                         await message.err(
-                            f"`Failed to retrieve data, status code: {response.status_code}`",
+                            f"`Failed to retrieve data, status code: {response.status}`",
                             del_in=5,
                         )
                         LOG.info(f".cr API Response: {await response.text()}")
@@ -150,10 +151,10 @@ async def currency_conversion(message: Message):
                         )
                         return
 
-                    msg += "__{}__:\n  {} **{}** = {} **{}**\n\n".format(
-                        date,
+                    msg += "__{}__:\n   {} **{}** = {} **{}**\n\n".format(
                         *map(
-                            data.get, ["transAmt", "transCurr", "crdhldBillAmt", "crdhldBillCurr"]
+                            data.get,
+                            ["fxDate", "transAmt", "transCurr", "crdhldBillAmt", "crdhldBillCurr"],
                         ),
                     )
 
