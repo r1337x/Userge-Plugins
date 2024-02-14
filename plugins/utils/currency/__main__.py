@@ -40,18 +40,20 @@ CURRENCIES = {}
 
 @userge.on_start
 async def init() -> None:
-    for _ in range(1):
+    try:
         if len(CURRENCIES) == 0:
             async with aiohttp.ClientSession() as session, session.get(
                 "https://www.mastercard.us/settlement/currencyrate/settlement-currencies"
             ) as response:
-                if response.status_code != 200:
-                    break
+                if response.status != 200:
+                    raise Exception(f"API response isn't 200: {await response.text()}")
 
                 res = await response.json()
                 data = res["data"]["currencies"]
                 for currency in data:
                     CURRENCIES[currency["alphaCd"]] = currency["currNam"]
+    except Exception as e:
+        LOG.info(f"Unexpected error occurred while fetching currencies: {e}")
 
     parser.add_argument(
         "from_currency",
@@ -131,7 +133,7 @@ async def currency_conversion(message: Message):
         async with aiohttp.ClientSession() as session:
             for url, date in urls:
                 async with session.get(url) as response:
-                    if response.status_code != 200:
+                    if response.status != 200:
                         await message.err(
                             f"`Failed to retrieve data, status code: {response.status_code}`",
                             del_in=5,
@@ -155,7 +157,7 @@ async def currency_conversion(message: Message):
                         ),
                     )
 
-                    await asyncio.sleep(1)
+                await asyncio.sleep(1)
     except Exception as e:
         await message.err(f"`Unexpected Error Occured: {e}`")
 
