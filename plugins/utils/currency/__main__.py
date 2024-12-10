@@ -19,6 +19,20 @@ from userge import Message, userge
 CHANNEL = userge.getCLogger(__name__)
 LOG = userge.getLogger(__name__)
 
+# Add headers constant
+HEADERS = {
+    "Host": "www.mastercard.us",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Cookie": "_abck=9D818DF69CE0B2308A74B221E86E03FF~0~YAAQbG0QAuusIpyTAQAA2N2ZqA2OExSUs9WJ9eKk/P7fh7UN0+bhamGggjA/2LnMzlt0aycpIlSFr0i3VkX0tx+MjaZVam+dOJN2eseq3sgrzLcfY6Upx1NWQoEHuXugy4V1F/NRnaRkEXEPFjVr22+0L1fXAq4pt6Zyj8Qc2PZp5KF8o1wyDQc2Ncrp5qp21JzlnaRZJmvGgzAviL7b3COUGqAixK7HccjlfdqDNdJTquUSNrv7pViYbF2BX/EyogKU1UxnHd7QqndNzsJ7ECmL3YQ5G34U4roQDUeCjQ3WbouXdg9/I51ABRgoBLBM474NUbKKzOjIW0AxjglF4gVwOeTMqMSnWuqhY0otT0yM4HCBoBtNI/a0YwFViKDXcfSXm4nqDDhrteCDoVx6wT+TrV1A7B1y3/do1zoTmc9mbvRPpSbR5kB4Oxvl3/EfWKBa9rEw3hyzR1Nm4j+XSH34WZbEK2ycU2zpHk9eSEkewuIglmqjPgaJyOz2D12s2wfijpAqiL+PK+jiu5cq3AsiZkAoSEjihiO4HcoouZC7xNO5ZMluLbzTkLRWikfIpGKsv7YoYAOtQsTVXgZpOlp474YkzJTa/7ocYptXQlztb1A4RluNPuBJydIcOOe/Uob3+hH+pcHBvv1F2XRgOEWTYbfs8v+ovcL5wmRMPpQ+cW5Mqqeo8u/Tab2l+81TtKp0zOfHl9NdQvKuR0/xYZ3KCVH9dH0AlPuUt+Qj/VDHxobYOS4ySj4qjQ==~-1~-1~-1",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Sec-GPC": "1"
+}
 
 class FallableArgumentParser(ArgumentParser):
     def exit(self, status: int = 0, message: Optional[str] = None):
@@ -44,7 +58,8 @@ async def init() -> None:
     try:
         if len(CURRENCIES) == 0:
             async with aiohttp.ClientSession() as session, session.get(
-                "https://www.mastercard.us/settlement/currencyrate/settlement-currencies"
+                "https://www.mastercard.us/settlement/currencyrate/settlement-currencies",
+                headers=HEADERS  # Add headers here
             ) as response:
                 if response.status != 200:
                     raise Exception(f"API response isn't 200: {await response.text()}")
@@ -133,7 +148,7 @@ async def currency_conversion(message: Message):
     try:
         async with aiohttp.ClientSession() as session:
             for url in urls:
-                async with session.get(url) as response:
+                async with session.get(url, headers=HEADERS) as response:
                     if response.status != 200:
                         await message.err(
                             f"`Failed to retrieve data, status code: {response.status}`",
